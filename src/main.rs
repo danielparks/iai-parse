@@ -2,7 +2,7 @@ use clap::Parser;
 use csv::Writer;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::exit;
 
 #[derive(Debug, clap::Parser)]
@@ -45,21 +45,21 @@ fn cli(params: Params) -> anyhow::Result<()> {
 
     let mut receiver = Receiver { writer };
 
-    for input in params.input {
-        parse(&input, &mut receiver)?;
+    for path in params.input {
+        parse(fs::read(path)?, &mut receiver)?;
     }
 
     Ok(())
 }
 
-fn parse<W: io::Write>(
-    path: &Path,
-    receiver: &mut Receiver<W>,
-) -> anyhow::Result<()> {
+fn parse<B, W>(input: B, receiver: &mut Receiver<W>) -> anyhow::Result<()>
+where
+    B: AsRef<[u8]>,
+    W: io::Write,
+{
     let mut benchmark = Vec::<u8>::new();
 
-    let contents = fs::read(path)?;
-    for line in contents.split(|&c| c == b'\n' || c == b'\r') {
+    for line in input.as_ref().split(|&c| c == b'\n' || c == b'\r') {
         match line {
             [] => {} // Empty line; skip.
             [b' ', ..] => {
