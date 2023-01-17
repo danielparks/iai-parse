@@ -1,0 +1,23 @@
+[package]
+name = "iai-parse"
+version = "0.1.0"
+authors = ["Daniel Parks <oss-iai-parse@demonhorse.org>"]
+description = ""
+homepage = "https://github.com/danielparks/iai-parse"
+repository = "https://github.com/danielparks/iai-parse"
+documentation = "https://github.com/danielparks/iai-parse"
+readme = "README.md"
+keywords = []
+categories = [] # https://crates.io/category_slugs
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+anyhow = "1.0.44"
+clap = { version = "4.0.18", features = ["derive"] }
+log = "0.4.14"
+simplelog = "0.12.0"
+smol = "1.2.5"
