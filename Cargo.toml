@@ -2,13 +2,13 @@
 name = "iai-parse"
 version = "0.1.0"
 authors = ["Daniel Parks <oss-iai-parse@demonhorse.org>"]
-description = ""
+description = "Simple tool to read iai output and produce CSV."
 homepage = "https://github.com/danielparks/iai-parse"
 repository = "https://github.com/danielparks/iai-parse"
 documentation = "https://github.com/danielparks/iai-parse"
 readme = "README.md"
-keywords = []
-categories = [] # https://crates.io/category_slugs
+keywords = ["iai", "benchmark"]
+categories = ["development-tools::profiling"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
