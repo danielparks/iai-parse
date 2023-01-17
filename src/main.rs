@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use csv::Writer;
+use std::convert::From;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ struct Params {
 }
 
 struct Receiver<W: io::Write> {
-    writer: Writer<W>,
+    writer: csv::Writer<W>,
 }
 
 impl<W: io::Write> Receiver<W> {
@@ -29,6 +29,20 @@ impl<W: io::Write> Receiver<W> {
     }
 }
 
+impl<W: io::Write> From<csv::Writer<W>> for Receiver<W> {
+    fn from(csv_writer: csv::Writer<W>) -> Self {
+        Receiver { writer: csv_writer }
+    }
+}
+
+impl<W: io::Write> From<W> for Receiver<W> {
+    fn from(writer: W) -> Self {
+        Receiver {
+            writer: csv::Writer::from_writer(writer),
+        }
+    }
+}
+
 fn main() {
     if let Err(error) = cli(Params::parse()) {
         eprintln!("Error: {:#}", error);
@@ -37,14 +51,14 @@ fn main() {
 }
 
 fn cli(params: Params) -> anyhow::Result<()> {
-    let mut writer = Writer::from_writer(io::stdout());
+    let mut writer = csv::Writer::from_writer(io::stdout());
     writer.write_record([
         &b"benchmark"[..],
         &b"parameter"[..],
         &b"value"[..],
     ])?;
 
-    let mut receiver = Receiver { writer };
+    let mut receiver = Receiver::from(writer);
 
     for path in params.input {
         parse(read(path)?, &mut receiver)?;
@@ -117,9 +131,7 @@ mod tests {
     #[test]
     fn simple() {
         let mut output: Vec<u8> = Vec::new();
-        let mut receiver = Receiver {
-            writer: Writer::from_writer(&mut output),
-        };
+        let mut receiver = Receiver::from(&mut output);
         let input = read("tests/corpus/iai-output-short.txt").unwrap();
         parse(input, &mut receiver).unwrap();
         drop(receiver);
