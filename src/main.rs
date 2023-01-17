@@ -12,6 +12,22 @@ struct Params {
     input: Vec<PathBuf>,
 }
 
+struct Receiver<W: io::Write> {
+    writer: Writer<W>,
+}
+
+impl<W: io::Write> Receiver<W> {
+    pub fn set(
+        &mut self,
+        benchmark: &[u8],
+        parameter: &[u8],
+        value: &[u8],
+    ) -> anyhow::Result<()> {
+        self.writer.write_record([benchmark, parameter, value])?;
+        Ok(())
+    }
+}
+
 fn main() {
     if let Err(error) = cli(Params::parse()) {
         eprintln!("Error: {:#}", error);
@@ -20,14 +36,6 @@ fn main() {
 }
 
 fn cli(params: Params) -> anyhow::Result<()> {
-    for input in params.input {
-        parse(&input)?;
-    }
-
-    Ok(())
-}
-
-fn parse(path: &Path) -> anyhow::Result<()> {
     let mut writer = Writer::from_writer(io::stdout());
     writer.write_record([
         &b"benchmark"[..],
@@ -35,6 +43,19 @@ fn parse(path: &Path) -> anyhow::Result<()> {
         &b"value"[..],
     ])?;
 
+    let mut receiver = Receiver { writer };
+
+    for input in params.input {
+        parse(&input, &mut receiver)?;
+    }
+
+    Ok(())
+}
+
+fn parse<W: io::Write>(
+    path: &Path,
+    receiver: &mut Receiver<W>,
+) -> anyhow::Result<()> {
     let mut benchmark = Vec::<u8>::new();
 
     let contents = fs::read(path)?;
@@ -50,7 +71,7 @@ fn parse(path: &Path) -> anyhow::Result<()> {
                     iter.next().expect("parameter value missing"),
                 );
 
-                writer.write_record([&benchmark, parameter, value])?;
+                receiver.set(&benchmark, parameter, value)?;
             }
             [..] => {
                 // A line not starting with a space.

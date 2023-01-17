@@ -1,0 +1,14 @@
+iai_escape_all_quotes_dirty_big
+  Instructions:                7400 (  +inf%)
+  L1 Accesses:                 9449 (-100.00000%)
+  L2 Accesses:                    3 (-100.0000%)
+  RAM Accesses:                  42 (+75.00000%)
+  Estimated Cycles:           10934 (+1253.218%)
+
+iai_unescape_sample_128
+  Instructions:              432517
+  L1 Accesses:               620301
+  L2 Accesses:                  195
+  RAM Accesses:                 612
+  Estimated Cycles:          642696
+
