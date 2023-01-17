@@ -1,8 +1,9 @@
+use anyhow::Context;
 use clap::Parser;
 use csv::Writer;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 #[derive(Debug, clap::Parser)]
@@ -46,10 +47,15 @@ fn cli(params: Params) -> anyhow::Result<()> {
     let mut receiver = Receiver { writer };
 
     for path in params.input {
-        parse(fs::read(path)?, &mut receiver)?;
+        parse(read(path)?, &mut receiver)?;
     }
 
     Ok(())
+}
+
+fn read<P: AsRef<Path>>(path: P) -> anyhow::Result<Vec<u8>> {
+    let path = path.as_ref();
+    fs::read(path).with_context(|| format!("Failed to read {}", path.display()))
 }
 
 fn parse<B, W>(input: B, receiver: &mut Receiver<W>) -> anyhow::Result<()>
@@ -100,5 +106,23 @@ fn parse_parameter_value(input: &[u8]) -> &[u8] {
         &input[start..=start + end]
     } else {
         &input[start..]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert2::check;
+
+    #[test]
+    fn simple() {
+        let mut output: Vec<u8> = Vec::new();
+        let mut receiver = Receiver {
+            writer: Writer::from_writer(&mut output),
+        };
+        let input = read("tests/corpus/iai-output-short.txt").unwrap();
+        parse(input, &mut receiver).unwrap();
+        drop(receiver);
+        check!(output == read("tests/corpus/iai-output-short.csv").unwrap());
     }
 }

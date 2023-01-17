@@ -1,0 +1,10 @@
+iai_escape_all_quotes_dirty_big,Instructions,7400
+iai_escape_all_quotes_dirty_big,L1 Accesses,9449
+iai_escape_all_quotes_dirty_big,L2 Accesses,3
+iai_escape_all_quotes_dirty_big,RAM Accesses,42
+iai_escape_all_quotes_dirty_big,Estimated Cycles,10934
+iai_unescape_sample_128,Instructions,432517
+iai_unescape_sample_128,L1 Accesses,620301
+iai_unescape_sample_128,L2 Accesses,195
+iai_unescape_sample_128,RAM Accesses,612
+iai_unescape_sample_128,Estimated Cycles,642696
