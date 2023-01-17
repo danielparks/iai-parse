@@ -1,6 +1,7 @@
 use clap::Parser;
+use csv::Writer;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
@@ -27,7 +28,13 @@ fn cli(params: Params) -> anyhow::Result<()> {
 }
 
 fn parse(path: &Path) -> anyhow::Result<()> {
-    let mut stdout = io::stdout();
+    let mut writer = Writer::from_writer(io::stdout());
+    writer.write_record([
+        &b"benchmark"[..],
+        &b"parameter"[..],
+        &b"value"[..],
+    ])?;
+
     let mut benchmark = Vec::<u8>::new();
 
     let contents = fs::read(path)?;
@@ -43,12 +50,7 @@ fn parse(path: &Path) -> anyhow::Result<()> {
                     iter.next().expect("parameter value missing"),
                 );
 
-                stdout.write_all(&benchmark)?;
-                stdout.write_all(b" ")?;
-                stdout.write_all(parameter)?;
-                stdout.write_all(b" ")?;
-                stdout.write_all(value)?;
-                stdout.write_all(b"\n")?;
+                writer.write_record([&benchmark, parameter, value])?;
             }
             [..] => {
                 // A line not starting with a space.
