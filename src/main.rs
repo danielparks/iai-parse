@@ -1,71 +1,81 @@
-use anyhow::bail;
 use clap::Parser;
-use simplelog::{
-    ColorChoice, CombinedLogger, Config, ConfigBuilder, LevelFilter,
-    TermLogger, TerminalMode,
-};
+use std::fs;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 #[derive(Debug, clap::Parser)]
 #[clap(version, about)]
 struct Params {
-    /// Verbosity (may be repeated up to three times)
-    #[clap(short, long, action = clap::ArgAction::Count)]
-    verbose: u8,
+    /// File(s) to parse.
+    input: Vec<PathBuf>,
 }
 
 fn main() {
-    smol::block_on(async {
-        if let Err(error) = cli(Params::parse()).await {
-            eprintln!("Error: {:#}", error);
-            exit(1);
-        }
-    })
+    if let Err(error) = cli(Params::parse()) {
+        eprintln!("Error: {:#}", error);
+        exit(1);
+    }
 }
 
-async fn cli(params: Params) -> anyhow::Result<()> {
-    let filter = match params.verbose {
-        4.. => bail!("-v is only allowed up to 3 times."),
-        3 => LevelFilter::Trace,
-        2 => LevelFilter::Debug,
-        1 => LevelFilter::Info,
-        0 => LevelFilter::Warn,
-    };
-
-    // Configure different logging for a module (sqlx::query here).
-    CombinedLogger::init(vec![
-        // Default logger
-        new_term_logger(
-            filter,
-            new_logger_config()
-                .add_filter_ignore_str("sqlx::query")
-                .build(),
-        ),
-        // Logger for sqlx::query
-        new_term_logger(
-            LevelFilter::Warn,
-            new_logger_config()
-                .add_filter_allow_str("sqlx::query")
-                .build(),
-        ),
-    ])
-    .unwrap();
+fn cli(params: Params) -> anyhow::Result<()> {
+    for input in params.input {
+        parse(&input)?;
+    }
 
     Ok(())
 }
 
-fn new_term_logger(level: LevelFilter, config: Config) -> Box<TermLogger> {
-    TermLogger::new(level, config, TerminalMode::Mixed, ColorChoice::Auto)
+fn parse(path: &Path) -> anyhow::Result<()> {
+    let mut stdout = io::stdout();
+    let mut benchmark = Vec::<u8>::new();
+
+    let contents = fs::read(path)?;
+    for line in contents.split(|&c| c == b'\n' || c == b'\r') {
+        match line {
+            [] => {} // Empty line; skip.
+            [b' ', ..] => {
+                // Parameter line ("  parameter:  value (change)").
+                let line = trim_leading_spaces(line);
+                let mut iter = line.splitn(2, |&c| c == b':');
+                let parameter = iter.next().expect("parameter name missing");
+                let value = parse_parameter_value(
+                    iter.next().expect("parameter value missing"),
+                );
+
+                stdout.write_all(&benchmark)?;
+                stdout.write_all(b" ")?;
+                stdout.write_all(parameter)?;
+                stdout.write_all(b" ")?;
+                stdout.write_all(value)?;
+                stdout.write_all(b"\n")?;
+            }
+            [..] => {
+                // A line not starting with a space.
+                benchmark = line.to_vec();
+            }
+        }
+    }
+
+    Ok(())
 }
 
-fn new_logger_config() -> ConfigBuilder {
-    let mut builder = ConfigBuilder::new();
-    builder.set_target_level(LevelFilter::Error);
+fn trim_leading_spaces(input: &[u8]) -> &[u8] {
+    if let Some(start) = input.iter().position(|&c| c != b' ') {
+        &input[start..]
+    } else {
+        input
+    }
+}
 
-    // FIXME: If this fails it will just print the time in UTC. That might be a
-    // little surprising, so this should probably warn the user... except that
-    // we haven’t finished setting up logging.
-    let _ = builder.set_time_offset_to_local();
-
-    builder
+fn parse_parameter_value(input: &[u8]) -> &[u8] {
+    let mut iter = input.iter();
+    let start = iter
+        .position(|&c| c != b' ')
+        .expect("parameter value empty");
+    if let Some(end) = iter.position(|&c| c == b' ') {
+        &input[start..=start + end]
+    } else {
+        &input[start..]
+    }
 }
