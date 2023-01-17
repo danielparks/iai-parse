@@ -1,7 +1,6 @@
 # iai-parse
 
-Generated from template https://github.com/danielparks/danielparks-template.rs
-with [cargo-generate](https://github.com/ashleygwilliams/cargo-generate).
+Simple tool to read [iai] output and produce CSV.
 
 ## Installation
 
@@ -30,3 +29,4 @@ additional terms or conditions.
 
 [docs.rs]: https://docs.rs/iai-parse/latest/iai_parse/
 [crates.io]: https://crates.io/crates/iai-parse
+[iai]: https://crates.io/crates/iai
