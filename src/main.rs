@@ -63,14 +63,31 @@ impl Table {
     pub fn write_csv<W: io::Write>(&self, writer: W) -> anyhow::Result<()> {
         let mut csv_writer = csv::Writer::from_writer(writer);
         csv_writer.write_record(self.headers())?;
+
+        let empty = b"".to_vec();
         for (benchmark, parameter) in self.benchmarks_and_parameters().iter() {
-            csv_writer.write_record([benchmark, parameter, &b"".to_vec()])?;
+            let start = [benchmark.clone(), parameter.clone()];
+            csv_writer.write_record(start.into_iter().chain(
+                self.columns.values().map(|column| {
+                    column.get(benchmark, parameter).unwrap_or(&empty).clone()
+                }),
+            ))?;
         }
         Ok(())
     }
 }
 
 impl Column {
+    pub fn get(
+        &self,
+        benchmark: &Vec<u8>,
+        parameter: &Vec<u8>,
+    ) -> Option<&Vec<u8>> {
+        self.benchmarks
+            .get(benchmark)
+            .and_then(|parameter_map| parameter_map.get(parameter))
+    }
+
     pub fn set(&mut self, benchmark: &[u8], parameter: &[u8], value: &[u8]) {
         let parameter_map = self
             .benchmarks
