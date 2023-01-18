@@ -225,27 +225,45 @@ fn revspec_parse<'r>(
             // Single revision.
             let mut walker = repo.revwalk()?;
             walker.push(from.id())?;
+
             Ok(Box::new(walker.take(1).map(|oid_result| {
                 oid_result.and_then(|oid| repo.find_commit(oid))
             })))
         }
         (Some(from), Some(to)) => {
             // Range of revisions.
-            let mut walker = repo.revwalk()?;
-            walker.push(to.id())?;
             let from_oid = from.id();
-            Ok(Box::new(walker.map_while(move |oid_result| {
-                match oid_result {
-                    Ok(oid) => {
-                        if oid == from_oid {
-                            None // Stop iterating
+            let to_oid = to.id();
+
+            let mut walker = repo.revwalk()?;
+            walker.set_sorting(git2::Sort::REVERSE)?;
+            walker.push(to_oid)?;
+
+            Ok(Box::new(
+                walker
+                    // Filter the oids. This is an awkward way to do it, but the
+                    // more natural way with take_while() can’t take the to_oid.
+                    .scan(false, move |taking, oid_result| {
+                        if !*taking {
+                            if Ok(from_oid) == oid_result {
+                                // Found from_oid! Start taking after this.
+                                *taking = true
+                            }
+                            Some(None)
                         } else {
-                            Some(repo.find_commit(oid))
+                            if Ok(to_oid) == oid_result {
+                                // Found to_oid! Stop taking after this.
+                                *taking = false
+                            }
+                            Some(Some(oid_result))
                         }
-                    }
-                    Err(error) => Some(Err(error)),
-                }
-            })))
+                    })
+                    .flatten()
+                    // Load commit objects
+                    .map(|oid_result| {
+                        oid_result.and_then(|oid| repo.find_commit(oid))
+                    }),
+            ))
         }
     }
 }
