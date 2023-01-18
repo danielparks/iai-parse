@@ -1,9 +1,10 @@
 use anyhow::Context;
 use clap::Parser;
-use git2::Repository;
+use git2::{ObjectType, Repository};
+use indexmap::{IndexMap, IndexSet};
 use std::convert::From;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::result::Result;
@@ -19,33 +20,68 @@ struct Params {
     git_revs: Vec<String>,
 }
 
-struct Receiver<W: io::Write> {
-    writer: csv::Writer<W>,
+#[derive(Clone, Debug, Default)]
+struct Table {
+    columns: IndexMap<Vec<u8>, Column>,
 }
 
-impl<W: io::Write> Receiver<W> {
-    pub fn set(
-        &mut self,
-        benchmark: &[u8],
-        parameter: &[u8],
-        value: &[u8],
-    ) -> anyhow::Result<()> {
-        self.writer.write_record([benchmark, parameter, value])?;
+#[derive(Clone, Debug, Default)]
+struct Column {
+    benchmarks: IndexMap<Vec<u8>, IndexMap<Vec<u8>, Vec<u8>>>,
+}
+
+impl Table {
+    pub fn column(&mut self, name: &[u8]) -> &mut Column {
+        self.columns
+            .entry(name.to_vec())
+            .or_insert_with(Column::default)
+    }
+
+    pub fn headers(&self) -> Vec<Vec<u8>> {
+        let mut headers = Vec::with_capacity(2 + self.columns.len());
+        headers.push(b"benchmark".to_vec());
+        headers.push(b"parameter".to_vec());
+        headers.extend(self.columns.keys().cloned());
+        headers
+    }
+
+    pub fn benchmarks(&self) -> IndexSet<Vec<u8>> {
+        let mut all_names: IndexSet<Vec<u8>> = IndexSet::new();
+        self.columns.values().for_each(|column| {
+            column.benchmarks().keys().for_each(|name| {
+                all_names.insert(name.clone());
+            });
+        });
+
+        all_names
+    }
+
+    pub fn write_csv<W: io::Write>(&self, writer: W) -> anyhow::Result<()> {
+        let mut csv_writer = csv::Writer::from_writer(writer);
+        csv_writer.write_record(self.headers())?;
+        for benchmark in self.benchmarks() {
+            csv_writer.write_record([
+                &benchmark,
+                &b"".to_vec(),
+                &b"".to_vec(),
+            ])?;
+        }
         Ok(())
     }
 }
 
-impl<W: io::Write> From<csv::Writer<W>> for Receiver<W> {
-    fn from(csv_writer: csv::Writer<W>) -> Self {
-        Receiver { writer: csv_writer }
+impl Column {
+    pub fn set(&mut self, benchmark: &[u8], parameter: &[u8], value: &[u8]) {
+        let parameter_map = self
+            .benchmarks
+            .entry(benchmark.to_vec())
+            .or_insert_with(IndexMap::new);
+        // FIXME: check if a value already exists?
+        parameter_map.insert(parameter.to_vec(), value.to_vec());
     }
-}
 
-impl<W: io::Write> From<W> for Receiver<W> {
-    fn from(writer: W) -> Self {
-        Receiver {
-            writer: csv::Writer::from_writer(writer),
-        }
+    pub fn benchmarks(&self) -> &IndexMap<Vec<u8>, IndexMap<Vec<u8>, Vec<u8>>> {
+        &self.benchmarks
     }
 }
 
@@ -57,33 +93,62 @@ fn main() {
 }
 
 fn cli(params: Params) -> anyhow::Result<()> {
-    if !params.git_revs.is_empty() {
-        let repo = Repository::open_from_env()?;
-        for revspec_str in params.git_revs {
-            for commit in revspec_parse(&repo, &revspec_str)? {
-                let commit = commit?;
-                println!(
-                    "{} {}",
-                    abbrev(commit.id()),
-                    commit.summary().unwrap_or("")
-                );
+    if params.git_revs.is_empty() {
+        return parse_in_working_tree(params);
+    }
+
+    let repo = Repository::open_from_env()?;
+    for revspec_str in params.git_revs {
+        for commit in revspec_parse(&repo, &revspec_str)? {
+            let commit = commit?;
+            println!(
+                "{} {}",
+                abbrev(commit.id()),
+                commit.summary().unwrap_or("")
+            );
+            let tree = commit.tree()?;
+            for path in &params.input {
+                let entry = match tree.get_path(path) {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        if error.code() == git2::ErrorCode::NotFound {
+                            println!("  {} not found", path.display());
+                            continue;
+                        }
+                        return Err(error.into());
+                    }
+                };
+                println!("  {:?}", entry.name());
+                let object = entry.to_object(&repo)?;
+                match object.kind() {
+                    None => println!("  {} is unknown", path.display()),
+                    Some(ObjectType::Blob) => {
+                        let blob = object.peel_to_blob()?;
+                        io::stdout().write_all(blob.content())?;
+                    }
+                    Some(ObjectType::Tree) => {
+                        println!("  {} is directory", path.display());
+                    }
+                    Some(kind) => {
+                        println!("  {} is {kind}", path.display());
+                    }
+                }
             }
         }
-        return Ok(());
+    }
+    Ok(())
+}
+
+fn parse_in_working_tree(params: Params) -> anyhow::Result<()> {
+    let mut table = Table::default();
+    {
+        let column = table.column(b"value");
+        for path in params.input {
+            parse(read(path)?, column)?;
+        }
     }
 
-    let mut writer = csv::Writer::from_writer(io::stdout());
-    writer.write_record([
-        &b"benchmark"[..],
-        &b"parameter"[..],
-        &b"value"[..],
-    ])?;
-
-    let mut receiver = Receiver::from(writer);
-
-    for path in params.input {
-        parse(read(path)?, &mut receiver)?;
-    }
+    table.write_csv(io::stdout())?;
 
     Ok(())
 }
@@ -145,10 +210,9 @@ fn read<P: AsRef<Path>>(path: P) -> anyhow::Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("Failed to read {}", path.display()))
 }
 
-fn parse<B, W>(input: B, receiver: &mut Receiver<W>) -> anyhow::Result<()>
+fn parse<B>(input: B, column: &mut Column) -> anyhow::Result<()>
 where
     B: AsRef<[u8]>,
-    W: io::Write,
 {
     let mut benchmark = Vec::<u8>::new();
 
@@ -164,7 +228,7 @@ where
                     iter.next().expect("parameter value missing"),
                 );
 
-                receiver.set(&benchmark, parameter, value)?;
+                column.set(&benchmark, parameter, value);
             }
             [..] => {
                 // A line not starting with a space.
@@ -199,15 +263,24 @@ fn parse_parameter_value(input: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::check;
+    use pretty_assertions::assert_str_eq;
 
     #[test]
-    fn simple() {
+    fn simple() -> anyhow::Result<()> {
+        let mut table = Table::default();
+        {
+            let mut column = table.column(b"value");
+            let input = read("tests/corpus/iai-output-short.txt")?;
+            parse(input, &mut column)?;
+        }
+
         let mut output: Vec<u8> = Vec::new();
-        let mut receiver = Receiver::from(&mut output);
-        let input = read("tests/corpus/iai-output-short.txt").unwrap();
-        parse(input, &mut receiver).unwrap();
-        drop(receiver);
-        check!(output == read("tests/corpus/iai-output-short.csv").unwrap());
+        table.write_csv(&mut output)?;
+
+        assert_str_eq!(
+            String::from_utf8(output)?,
+            String::from_utf8(read("tests/corpus/iai-output-short.csv")?)?,
+        );
+        Ok(())
     }
 }
