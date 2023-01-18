@@ -45,26 +45,39 @@ impl Table {
         headers
     }
 
-    pub fn benchmarks(&self) -> IndexSet<Vec<u8>> {
-        let mut all_names: IndexSet<Vec<u8>> = IndexSet::new();
+    pub fn benchmarks_and_parameters(
+        &self,
+    ) -> IndexMap<Vec<u8>, IndexSet<Vec<u8>>> {
+        let mut benchmarks: IndexMap<Vec<u8>, IndexSet<Vec<u8>>> =
+            IndexMap::new();
         self.columns.values().for_each(|column| {
-            column.benchmarks().keys().for_each(|name| {
-                all_names.insert(name.clone());
-            });
+            column
+                .benchmarks()
+                .iter()
+                .for_each(|(name, parameter_map)| {
+                    let parameters = benchmarks
+                        .entry(name.clone())
+                        .or_insert_with(IndexSet::new);
+                    parameter_map.keys().for_each(|parameter| {
+                        parameters.insert(parameter.clone());
+                    });
+                });
         });
 
-        all_names
+        benchmarks
     }
 
     pub fn write_csv<W: io::Write>(&self, writer: W) -> anyhow::Result<()> {
         let mut csv_writer = csv::Writer::from_writer(writer);
         csv_writer.write_record(self.headers())?;
-        for benchmark in self.benchmarks() {
-            csv_writer.write_record([
-                &benchmark,
-                &b"".to_vec(),
-                &b"".to_vec(),
-            ])?;
+        for (benchmark, parameters) in self.benchmarks_and_parameters().iter() {
+            for parameter in parameters {
+                csv_writer.write_record([
+                    &benchmark,
+                    &parameter,
+                    &b"".to_vec(),
+                ])?;
+            }
         }
         Ok(())
     }
