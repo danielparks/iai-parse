@@ -18,6 +18,11 @@ struct Params {
     /// Git revisions to check, e.g. main..HEAD.
     #[clap(long, short('r'), value_name = "REVSPEC")]
     git_revs: Vec<String>,
+
+    /// Path to git repo (defaults to consulting $GIT_DIR then searching the
+    /// working directory and its parents)
+    #[clap(long, value_name = "PATH")]
+    git_repo: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -114,7 +119,12 @@ fn cli(params: Params) -> anyhow::Result<()> {
         return parse_in_working_tree(params);
     }
 
-    let repo = Repository::open_from_env()?;
+    let repo = if let Some(repo_path) = params.git_repo {
+        Repository::open(repo_path)?
+    } else {
+        Repository::open_from_env()?
+    };
+
     let mut table = Table::default();
     for revspec_str in params.git_revs {
         for commit in revspec_parse(&repo, &revspec_str)? {
