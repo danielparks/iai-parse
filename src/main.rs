@@ -4,7 +4,7 @@ use git2::{ObjectType, Repository};
 use indexmap::{IndexMap, IndexSet};
 use std::convert::From;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::result::Result;
@@ -115,13 +115,17 @@ fn cli(params: Params) -> anyhow::Result<()> {
     }
 
     let repo = Repository::open_from_env()?;
+    let mut table = Table::default();
     for revspec_str in params.git_revs {
         for commit in revspec_parse(&repo, &revspec_str)? {
             let commit = commit?;
-            println!(
-                "{} {}",
-                abbrev(commit.id()),
-                commit.summary().unwrap_or("")
+            let column = table.column(
+                format!(
+                    "{} {}",
+                    abbrev(commit.id()),
+                    commit.summary().unwrap_or("")
+                )
+                .as_bytes(),
             );
             let tree = commit.tree()?;
             for path in &params.input {
@@ -129,30 +133,44 @@ fn cli(params: Params) -> anyhow::Result<()> {
                     Ok(entry) => entry,
                     Err(error) => {
                         if error.code() == git2::ErrorCode::NotFound {
-                            println!("  {} not found", path.display());
+                            eprintln!(
+                                "{:?} not found in {}",
+                                path.display(),
+                                commit.id()
+                            );
                             continue;
                         }
                         return Err(error.into());
                     }
                 };
-                println!("  {:?}", entry.name());
+
                 let object = entry.to_object(&repo)?;
                 match object.kind() {
-                    None => println!("  {} is unknown", path.display()),
                     Some(ObjectType::Blob) => {
-                        let blob = object.peel_to_blob()?;
-                        io::stdout().write_all(blob.content())?;
+                        parse(object.peel_to_blob()?.content(), column)?;
                     }
-                    Some(ObjectType::Tree) => {
-                        println!("  {} is directory", path.display());
-                    }
-                    Some(kind) => {
-                        println!("  {} is {kind}", path.display());
-                    }
+                    Some(ObjectType::Tree) => eprintln!(
+                        "{:?} is directory in {}",
+                        path.display(),
+                        commit.id()
+                    ),
+                    Some(kind) => eprintln!(
+                        "{:?} is {kind} in {}",
+                        path.display(),
+                        commit.id()
+                    ),
+                    None => eprintln!(
+                        "{:?} is unknown in {}",
+                        path.display(),
+                        commit.id()
+                    ),
                 }
             }
         }
     }
+
+    table.write_csv(io::stdout())?;
+
     Ok(())
 }
 
