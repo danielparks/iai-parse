@@ -2,6 +2,7 @@ use anyhow::Context;
 use clap::Parser;
 use git2::{ObjectType, Repository};
 use indexmap::{IndexMap, IndexSet};
+use std::collections::HashSet;
 use std::convert::From;
 use std::fs;
 use std::io;
@@ -231,34 +232,27 @@ fn revspec_parse<'r>(
             })))
         }
         (Some(from), Some(to)) => {
-            // Range of revisions.
-            let from_oid = from.id();
-            let to_oid = to.id();
+            // Range of revisions. This works like `git log` it loads the
+            // history of both `from` and `to` and removes everything in the
+            // `from` list from the `to` list.
+            let mut from_walker = repo.revwalk()?;
+            from_walker.push(from.id())?;
+            let from_oids: HashSet<git2::Oid> = from_walker
+                .filter_map(|oid_result| oid_result.ok())
+                .collect();
 
-            let mut walker = repo.revwalk()?;
-            walker.set_sorting(git2::Sort::REVERSE)?;
-            walker.push(to_oid)?;
+            let mut to_walker = repo.revwalk()?;
+            to_walker.set_sorting(git2::Sort::REVERSE)?;
+            to_walker.push(to.id())?;
 
             Ok(Box::new(
-                walker
-                    // Filter the oids. This is an awkward way to do it, but the
-                    // more natural way with take_while() can’t take the to_oid.
-                    .scan(false, move |taking, oid_result| {
-                        if !*taking {
-                            if Ok(from_oid) == oid_result {
-                                // Found from_oid! Start taking after this.
-                                *taking = true
-                            }
-                            Some(None)
-                        } else {
-                            if Ok(to_oid) == oid_result {
-                                // Found to_oid! Stop taking after this.
-                                *taking = false
-                            }
-                            Some(Some(oid_result))
-                        }
+                to_walker
+                    .filter(move |oid_result| {
+                        oid_result
+                            .as_ref()
+                            .map(|oid| !from_oids.contains(oid))
+                            .unwrap_or(true)
                     })
-                    .flatten()
                     // Load commit objects
                     .map(|oid_result| {
                         oid_result.and_then(|oid| repo.find_commit(oid))
