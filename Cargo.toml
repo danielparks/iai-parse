@@ -2,7 +2,7 @@
 name = "iai-parse"
 version = "0.1.0"
 authors = ["Daniel Parks <oss-iai-parse@demonhorse.org>"]
-description = "Simple tool to read iai output and produce CSV."
+description = "Convert iai benchmark output to CSV."
 homepage = "https://github.com/danielparks/iai-parse"
 repository = "https://github.com/danielparks/iai-parse"
 documentation = "https://github.com/danielparks/iai-parse"
