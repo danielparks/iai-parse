@@ -87,7 +87,7 @@ jobs:
           key: cargo-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          bin: git-status-vars
+          bin: iai-parse
           target: ${{ matrix.target }}
           tar: all
           zip: windows
