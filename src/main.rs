@@ -1,3 +1,7 @@
+#![forbid(unsafe_code)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::let_underscore_untyped, clippy::map_unwrap_or)]
+
 use anyhow::Context;
 use clap::Parser;
 use git2::{ObjectType, Repository};
@@ -110,7 +114,7 @@ impl Column {
 
 fn main() {
     if let Err(error) = cli(Params::parse()) {
-        eprintln!("Error: {:#}", error);
+        eprintln!("Error: {error:#}");
         exit(1);
     }
 }
@@ -158,7 +162,7 @@ fn cli(params: Params) -> anyhow::Result<()> {
                 let object = entry.to_object(&repo)?;
                 match object.kind() {
                     Some(ObjectType::Blob) => {
-                        parse(object.peel_to_blob()?.content(), column)?;
+                        parse(object.peel_to_blob()?.content(), column);
                     }
                     Some(ObjectType::Tree) => eprintln!(
                         "{:?} is directory in {}",
@@ -190,7 +194,7 @@ fn parse_in_working_tree(params: Params) -> anyhow::Result<()> {
     {
         let column = table.column(b"value");
         for path in params.input {
-            parse(read(path)?, column)?;
+            parse(read(path)?, column);
         }
     }
 
@@ -237,9 +241,8 @@ fn revspec_parse<'r>(
             // `from` list from the `to` list.
             let mut from_walker = repo.revwalk()?;
             from_walker.push(from.id())?;
-            let from_oids: HashSet<git2::Oid> = from_walker
-                .filter_map(|oid_result| oid_result.ok())
-                .collect();
+            let from_oids: HashSet<git2::Oid> =
+                from_walker.filter_map(Result::ok).collect();
 
             let mut to_walker = repo.revwalk()?;
             to_walker.set_sorting(git2::Sort::REVERSE)?;
@@ -267,7 +270,7 @@ fn read<P: AsRef<Path>>(path: P) -> anyhow::Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("Failed to read {}", path.display()))
 }
 
-fn parse<B>(input: B, column: &mut Column) -> anyhow::Result<()>
+fn parse<B>(input: B, column: &mut Column)
 where
     B: AsRef<[u8]>,
 {
@@ -293,8 +296,6 @@ where
             }
         }
     }
-
-    Ok(())
 }
 
 fn trim_leading_spaces(input: &[u8]) -> &[u8] {
@@ -326,9 +327,9 @@ mod tests {
     fn simple() -> anyhow::Result<()> {
         let mut table = Table::default();
         {
-            let mut column = table.column(b"value");
+            let column = table.column(b"value");
             let input = read("tests/corpus/iai-output-short.txt")?;
-            parse(input, &mut column)?;
+            parse(input, column);
         }
 
         let mut output: Vec<u8> = Vec::new();
