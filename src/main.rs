@@ -354,6 +354,9 @@ where
 
 /// Find the subslice with leading spaces removed.
 fn trim_leading_spaces(input: &[u8]) -> &[u8] {
+    // This could use `map()`, but it’s not a natural usage since it doesn’t
+    // transform `start`, it uses `start` to transform `input`.
+    #[allow(clippy::option_if_let_else)]
     if let Some(start) = input.iter().position(|&c| c != b' ') {
         &input[start..]
     } else {
@@ -367,6 +370,10 @@ fn parse_parameter_value(input: &[u8]) -> &[u8] {
     let start = iter
         .position(|&c| c != b' ')
         .expect("parameter value empty");
+
+    // This could use `map()`, but it’s not a natural usage since it doesn’t
+    // transform `end`, it uses `end` to transform `input`.
+    #[allow(clippy::option_if_let_else)]
     if let Some(end) = iter.position(|&c| c == b' ') {
         // start + end must be a valid index within input.
         #[allow(clippy::arithmetic_side_effects)]
