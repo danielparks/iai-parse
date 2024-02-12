@@ -9,9 +9,14 @@ All notable changes to this project will be documented in this file.
 * Upgrade [git2] dependency to 0.18.2 to fix [security vulnerabilities in
   libgit2][GHSA-22q8-ghmq-63vf], including in revision parsing. These do not
   appear to affect iai-parse.
+* Upgrade indirect dependency [rustix] to fix a [security
+  vulnerability][GHSA-c827-hfw6-qwvm] in directory iterators. This does not
+  appear to affect iai-parse.
 
 [git2]: https://crates.io/crates/git2
 [GHSA-22q8-ghmq-63vf]: https://github.com/advisories/GHSA-22q8-ghmq-63vf
+[rustix]: https://crates.io/crates/rustix
+[GHSA-c827-hfw6-qwvm]: https://github.com/advisories/GHSA-c827-hfw6-qwvm
 
 ## Release 0.1.2 (2023-06-21)
 
