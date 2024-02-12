@@ -55,9 +55,7 @@ impl Table {
     ///
     /// This will create a column if it doesn’t already exist.
     pub fn column(&mut self, name: &[u8]) -> &mut Column {
-        self.columns
-            .entry(name.to_vec())
-            .or_insert_with(Column::default)
+        self.columns.entry(name.to_vec()).or_default()
     }
 
     /// Get a vector of byte strings representing headers in the table.
@@ -102,7 +100,7 @@ impl Table {
         csv_writer.write_record(self.headers())?;
 
         let empty = b"".to_vec();
-        for (benchmark, parameter) in self.benchmarks_and_parameters().iter() {
+        for (benchmark, parameter) in &self.benchmarks_and_parameters() {
             let start = [benchmark.clone(), parameter.clone()];
             csv_writer.write_record(start.into_iter().chain(
                 self.columns.values().map(|column| {
@@ -128,10 +126,8 @@ impl Column {
 
     /// Set a parameter value for an individual benchmark within this run.
     pub fn set(&mut self, benchmark: &[u8], parameter: &[u8], value: &[u8]) {
-        let parameter_map = self
-            .benchmarks
-            .entry(benchmark.to_vec())
-            .or_insert_with(IndexMap::new);
+        let parameter_map =
+            self.benchmarks.entry(benchmark.to_vec()).or_default();
         // FIXME: check if a value already exists?
         parameter_map.insert(parameter.to_vec(), value.to_vec());
     }
