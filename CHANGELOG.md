@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## main branch
 
+### Security fixes
+
+* Upgrade indirect dependency [idna] to fix a [security
+  vulnerability][RUSTSEC-2024-0421] in domain handling. This does not
+  appear to affect iai-parse.
+
+[idna]: https://crates.io/crates/idna
+[RUSTSEC-2024-0421]: https://rustsec.org/advisories/RUSTSEC-2024-0421
+
 ## Release 0.1.3 (2024-02-12)
 
 ### Security fixes
