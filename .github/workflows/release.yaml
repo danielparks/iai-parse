@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: danielparks/github-actions/create-release-artifacts@main
         with:
-          binary: rederr
+          binary: iai-parse
           target: ${{ matrix.target }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
