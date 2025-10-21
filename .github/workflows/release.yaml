@@ -1,11 +1,10 @@
-# Mostly copied from https://github.com/taiki-e/cargo-hack/blob/72a9fc95377c453a18026329577c59fa60bfa737/.github/workflows/release.yml
+# Mostly copied from https://github.com/taiki-e/cargo-hack/blob/main/.github/workflows/release.yml
 name: Release
 
 permissions:
   contents: read
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - v*.*.*
@@ -18,10 +17,6 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: -D warnings
   RUSTUP_MAX_RETRIES: 10
-
-defaults:
-  run:
-    shell: bash --noprofile --norc -CeEuxo pipefail {0}
 
 jobs:
   create-release:
@@ -70,7 +65,6 @@ jobs:
     steps:
       - uses: danielparks/github-actions/create-release-artifacts@main
         with:
-          binary: iai-parse
           target: ${{ matrix.target }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
