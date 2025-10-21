@@ -1,6 +1,6 @@
 [package]
 name = "iai-parse"
-version = "0.1.6-alpha1"
+version = "0.1.5"
 authors = ["Daniel Parks <oss-iai-parse@demonhorse.org>"]
 description = "Convert iai benchmark output to CSV."
 homepage = "https://github.com/danielparks/iai-parse"
