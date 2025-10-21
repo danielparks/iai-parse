@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## main branch
 
+## Release 0.1.6-alpha1 (2025-10-21)
+
+* Test new release workflow. Won’t be published to crates.io.
+
 ## Release 0.1.5 (2025-02-12)
 
 * Bump version to fix release workflow.
