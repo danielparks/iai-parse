@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## main branch
 
+* Improvements to release process; no functional changes.
+
 ## Release 0.1.5 (2025-02-12)
 
 * Bump version to fix release workflow.

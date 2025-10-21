@@ -5,6 +5,12 @@ shopt -s extglob
 
 version=$1
 
+case "$(git name)" in
+  release*) ;; # Good
+  main) git switch -c "release-$version" ;;
+  *) echo "Not on main or release branch" >&2 ; exit 1 ;;
+esac
+
 awk-in-place () {
   local tmpfile=$(mktemp)
   local original="$1"
@@ -78,6 +84,7 @@ cargo publish
 
 git tag --sign --file "$changelog" --cleanup=verbatim "v${version}"
 git push --tags origin main
+git auto-pr --ff
 
 awk-in-place CHANGELOG.md '
   /^## Release/ && !done {
@@ -86,9 +93,11 @@ awk-in-place CHANGELOG.md '
   }
   { print }'
 
+git switch -c post-release
 git add CHANGELOG.md
 git diff --staged
 
 confirm 'Commit with message "Prepping CHANGELOG.md for development."?'
 
 git commit -m 'Prepping CHANGELOG.md for development.'
+git auto-pr --ff
