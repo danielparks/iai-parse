@@ -138,7 +138,7 @@ git tag --sign --file "$changelog" --cleanup=verbatim "v${version}"
 git push --tags origin HEAD
 auto-pr "Release ${version}"
 
-cargo publish
+#cargo publish
 
 awk-in-place CHANGELOG.md '
   /^## Release/ && !done {
