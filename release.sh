@@ -154,5 +154,5 @@ git diff --staged
 confirm 'Commit with message "Prepping CHANGELOG.md for development."?'
 
 git commit -m 'Prepping CHANGELOG.md for development.'
-git push origin HEAD
+git push --force origin HEAD
 auto-pr "Prepping CHANGELOG.md for development"
