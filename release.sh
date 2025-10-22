@@ -134,8 +134,8 @@ EOF
 
 check-changes
 
-git tag --sign --file "$changelog" --cleanup=verbatim "v${version}"
-git push --tags origin HEAD
+git tag --force --sign --file "$changelog" --cleanup=verbatim "v${version}"
+git push --force --tags origin HEAD
 auto-pr "Release ${version}"
 
 #cargo publish
