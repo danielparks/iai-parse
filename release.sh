@@ -32,7 +32,7 @@ check-changes () {
 }
 
 auto-pr () {
-  pr_url=$(gh pr view --json url,closed 2>/dev/null \
+  pr_url=$(gh pr view --json url,closed 2>/dev/null || true \
     | jq -r 'select(.closed | not) | .url')
 
   if [[ "$pr_url" ]] ; then
