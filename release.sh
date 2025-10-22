@@ -124,14 +124,15 @@ cat "$changelog"
 echo
 confirm 'Release notes displayed above. Continue?'
 
-if !check-changes &>/dev/null ; then
+# Commit version bump if necessary.
+check-changes &>/dev/null || {
   git add -u
   git commit --cleanup=verbatim --file - <<EOF
 Release ${version}
 
 $(parse-changelog CHANGELOG.md "$version")
 EOF
-fi
+}
 
 check-changes
 
