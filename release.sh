@@ -77,20 +77,20 @@ case "$branch_name" in
   *) echo "Not on main or release branch" >&2 ; exit 1 ;;
 esac
 
-if !command -v gh &>/dev/null ; then
+command -v gh &>/dev/null || {
   echo "gh not installed (https://cli.github.com)" >&2
   exit 1
-fi
+}
 
-if !command -v jq &>/dev/null ; then
+command -v jq &>/dev/null || {
   echo "jq not installed (https://jqlang.org)" >&2
   exit 1
-fi
+}
 
-if !command -v parse-changelog &>/dev/null ; then
+command -v parse-changelog &>/dev/null || {
   echo "parse-changelog not installed (https://github.com/taiki-e/parse-changelog)" >&2
   exit 1
-fi
+}
 
 check-changes
 
