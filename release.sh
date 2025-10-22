@@ -71,12 +71,6 @@ case $version in
   *) echo "Usage $0 VERSION" >&2 ; exit 1 ;;
 esac
 
-case "$branch_name" in
-  release*) ;; # Good
-  main) git switch -c "release-$version" ;;
-  *) echo "Not on main or release branch" >&2 ; exit 1 ;;
-esac
-
 command -v gh &>/dev/null || {
   echo "gh not installed (https://cli.github.com)" >&2
   exit 1
@@ -91,6 +85,10 @@ command -v parse-changelog &>/dev/null || {
   echo "parse-changelog not installed (https://github.com/taiki-e/parse-changelog)" >&2
   exit 1
 }
+
+if [[ "$branch_name" = main ]] ; then
+  git switch -c "release-$version"
+fi
 
 check-changes
 
