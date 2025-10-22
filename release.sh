@@ -67,7 +67,7 @@ confirm () {
 }
 
 case $version in
-  +([0-9]).+([0-9]).+([0-9])) ;; # Good
+  +([0-9]).+([0-9]).+([0-9])*) ;; # Good
   *) echo "Usage $0 VERSION" >&2 ; exit 1 ;;
 esac
 
