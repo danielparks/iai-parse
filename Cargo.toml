@@ -17,7 +17,7 @@ rust-version = "1.74.1"
 anyhow = "1.0.44"
 clap = { version = "4.5.23", features = ["derive"] }
 csv = "1.1.6"
-git2 = { version = "0.20.0", default-features = false }
+git2 = { version = "0.20.4", default-features = false }
 indexmap = "1.9.2"
 
 [dev-dependencies]
