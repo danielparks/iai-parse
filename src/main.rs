@@ -27,7 +27,7 @@ struct Params {
     git_revs: Vec<String>,
 
     /// Path to git repo (defaults to consulting `$GIT_DIR` then searching the
-    /// working directory and its parents)
+    /// working directory and its parents).
     #[clap(long, value_name = "PATH")]
     git_repo: Option<PathBuf>,
 }
