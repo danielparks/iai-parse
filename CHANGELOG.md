@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## main branch
 
+### Security fixes
+
+* Update [anyhow] to avoid unsoundness ([RUSTSEC-2026-0190]). This does not appear to affect iai-parse.
+
+[anyhow]: https://github.com/dtolnay/anyhow
+[RUSTSEC-2026-0190]: https://rustsec.org/advisories/RUSTSEC-2026-0190
+
 ## Release 0.1.6 (2025-10-21)
 
 * Improvements to release process; no functional changes.
