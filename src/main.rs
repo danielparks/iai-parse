@@ -171,7 +171,7 @@ fn cli(params: Params) -> anyhow::Result<()> {
                 format!(
                     "{} {}",
                     abbrev(commit.id()),
-                    commit.summary().unwrap_or("")
+                    commit.summary().ok().flatten().unwrap_or("")
                 )
                 .as_bytes(),
             );
@@ -350,9 +350,10 @@ where
 
 /// Find the subslice with leading spaces removed.
 fn trim_leading_spaces(input: &[u8]) -> &[u8] {
-    // This could use `map()`, but it’s not a natural usage since it doesn’t
-    // transform `start`, it uses `start` to transform `input`.
-    #[allow(clippy::option_if_let_else)]
+    #[expect(
+        clippy::option_if_let_else,
+        reason = "map() is unnatural since this doesn’t transform the value"
+    )]
     if let Some(start) = input.iter().position(|&c| c != b' ') {
         &input[start..]
     } else {
@@ -367,12 +368,15 @@ fn parse_parameter_value(input: &[u8]) -> &[u8] {
         .position(|&c| c != b' ')
         .expect("parameter value empty");
 
-    // This could use `map()`, but it’s not a natural usage since it doesn’t
-    // transform `end`, it uses `end` to transform `input`.
-    #[allow(clippy::option_if_let_else)]
+    #[expect(
+        clippy::option_if_let_else,
+        reason = "map() is unnatural since this doesn’t transform the value"
+    )]
     if let Some(end) = iter.position(|&c| c == b' ') {
-        // start + end must be a valid index within input.
-        #[allow(clippy::arithmetic_side_effects)]
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "start + end must be a valid index within input"
+        )]
         &input[start..=start + end]
     } else {
         &input[start..]

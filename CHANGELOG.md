@@ -6,8 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Security fixes
 
+* Update [git2] to avoid undefined behavior ([RUSTSEC-2026-0183], [RUSTSEC-2026-0184]). This does not appear to affect iai-parse.
 * Update [anyhow] to avoid unsoundness ([RUSTSEC-2026-0190]). This does not appear to affect iai-parse.
 
+[git2]: https://github.com/rust-lang/git2-rs
+[RUSTSEC-2026-0183]: https://rustsec.org/advisories/RUSTSEC-2026-0183
+[RUSTSEC-2026-0184]: https://rustsec.org/advisories/RUSTSEC-2026-0184
 [anyhow]: https://github.com/dtolnay/anyhow
 [RUSTSEC-2026-0190]: https://rustsec.org/advisories/RUSTSEC-2026-0190
 
